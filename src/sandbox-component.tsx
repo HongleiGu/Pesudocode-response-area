@@ -1,13 +1,13 @@
 import { ThemeProvider } from '@styles/minimal/theme-provider'
 
-import { SandboxResponseAreaTub } from './types/Sandbox'
+import { PseudocodeResponseAreaTub } from './types/Pseudocode'
 
 function ResponseAreaInputWrapper({ children }: { children: React.ReactNode }) {
   return <ThemeProvider>{children}</ThemeProvider>
 }
 
 // wrap the components with the necessary providers; only in the sandbox
-class WrappedSandboxResponseAreaTub extends SandboxResponseAreaTub {
+class WrappedSandboxResponseAreaTub extends PseudocodeResponseAreaTub {
   constructor() {
     super()
 

@@ -7,6 +7,7 @@ import { MatrixResponseAreaTub } from './Matrix'
 import { MultipleChoiceResponseAreaTub } from './MultipleChoice'
 import { NumberResponseAreaTub } from './NumberInput'
 import { NumericUnitsResponseAreaTub } from './NumericUnits'
+import { PseudocodeResponseAreaTub } from './Pseudocode'
 import { ResponseAreaTub } from './response-area-tub'
 import { TableResponseAreaTub } from './Table'
 import { TextResponseAreaTub } from './TextInput'
@@ -25,6 +26,7 @@ export const supportedResponseTypes = [
   'ESSAY',
   'CODE',
   'MILKDOWN',
+  'PESUDOCODE'
 ]
 
 if (typeof window !== 'undefined') {
@@ -98,6 +100,8 @@ const createReponseAreaTub = (type: string): ResponseAreaTub => {
       return new EssayResponseAreaTub()
     case 'CODE':
       return new CodeResponseAreaTub()
+    case 'PSEUDOCODE':
+      return new PseudocodeResponseAreaTub()
     case 'VOID':
       return new VoidResponseAreaTub()
     default:
