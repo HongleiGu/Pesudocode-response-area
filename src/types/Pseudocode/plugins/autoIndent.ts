@@ -12,7 +12,7 @@ export const autoIndentAfterColon = keymap.of([
       const beforeCursor = line.text.slice(0, from - line.from);
 
       // Only trigger if line ends with :
-      if (!beforeCursor.trimEnd().endsWith(':')) {
+      if (!beforeCursor.trimEnd().endsWith('DO')) {
         return false; // let default Enter behavior happen
       }
 

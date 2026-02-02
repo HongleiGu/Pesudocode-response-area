@@ -1,36 +1,57 @@
 // PseudocodeInput.tsx
-import { StreamLanguage, syntaxHighlighting } from '@codemirror/language';
+import { foldGutter, foldService, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
-import { placeholder, keymap } from '@codemirror/view';
-import { makeStyles } from '@styles'; // adjust to your project
+import { placeholder } from '@codemirror/view';
 import { EditorView, basicSetup } from 'codemirror';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { BaseResponseAreaProps } from '../base-props.type';
 
-import { autoIndentAfterColon } from './utils/autoIndent';
-import { pseudocodeHighlightStyle } from './utils/highlight';
-import { pseudocodeLanguage } from './utils/language';
-import { pseudocodeTheme } from './utils/pseudocode.theme';
+import { autoIndentAfterColon } from './plugins/autoIndent';
+import { pseudocodeFoldFunc } from './plugins/fold';
+import { pseudocodeHighlightStyle } from './plugins/highlight';
+import { pseudocodeLanguage } from './plugins/language';
+import { pseudocodeTheme } from './plugins/pseudocode.theme';
+import { StudentResponse } from './types/input';
+import { usePseudocodeInputStyles } from './utils/styles';
 
 type PseudocodeInputProps = Omit<BaseResponseAreaProps, 'handleChange' | 'answer'> & {
-  handleChange: (val: string) => void;
-  answer?: string;
+  handleChange: (val: StudentResponse) => void;
+  answer?: StudentResponse;
+  isTeacherMode?: boolean;
 };
 
+export const PseudocodeInput: React.FC<PseudocodeInputProps> = ({
+  handleChange,
+  answer,
+  isTeacherMode = false,
+}) => {
+  const { classes } = usePseudocodeInputStyles();
+  const [internalAnswer, setInternalAnswer] = useState<StudentResponse>(answer ?? {
+    pseudocode: '',
+    time_complexity: null,
+    space_complexity: null,
+    explanation: null,
+  });
 
-export const PseudocodeInput: React.FC<PseudocodeInputProps> = ({ handleChange, answer }) => {
-  const { classes } = useStyles();
   const editorRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
-  // Initialize editor
+  // Sync external answer only when it changes
+  useEffect(() => {
+    if (!answer) return;
+    setInternalAnswer(answer);
+  }, [answer]);
+
+  // Initialize CodeMirror
   useEffect(() => {
     if (!editorRef.current) return;
 
     const state = EditorState.create({
-      doc: answer ?? '',
+      doc: internalAnswer.pseudocode ?? '',
       extensions: [
+        foldGutter(),
+        foldService.of(pseudocodeFoldFunc),
         autoIndentAfterColon,
         basicSetup,
         pseudocodeLanguage,
@@ -38,13 +59,13 @@ export const PseudocodeInput: React.FC<PseudocodeInputProps> = ({ handleChange, 
         pseudocodeTheme,
         placeholder('Write your pseudocode here...'),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            handleChange(update.state.doc.toString());
-          }
+          if (!update.docChanged) return;
+          const newCode = update.state.doc.toString();
+          setInternalAnswer((prev) => ({ ...prev, pseudocode: newCode }));
         }),
         EditorView.theme({
-          "&": { height: "100%" },
-          ".cm-scroller": { overflow: "auto" },
+          '&': { height: '100%' },
+          '.cm-scroller': { overflow: 'auto' },
         }),
       ],
     });
@@ -55,48 +76,51 @@ export const PseudocodeInput: React.FC<PseudocodeInputProps> = ({ handleChange, 
     });
 
     viewRef.current = view;
-
     return () => {
       view.destroy();
       viewRef.current = null;
     };
   }, []);
 
-  // Update editor if answer prop changes externally
-  useEffect(() => {
-    if (viewRef.current && answer !== undefined) {
-      const view = viewRef.current;
-      if (view.state.doc.toString() !== answer) {
-        view.dispatch({
-          changes: { from: 0, to: view.state.doc.length, insert: answer },
-        });
-      }
-    }
-  }, [answer]);
+  // Debounced / onBlur submit
+  const reportChange = () => {
+    handleChange({
+      pseudocode: internalAnswer.pseudocode ?? '',
+      time_complexity: internalAnswer.time_complexity ?? null,
+      space_complexity: internalAnswer.space_complexity ?? null,
+      explanation: internalAnswer.explanation ?? null,
+    });
+  };
 
-  return <div ref={editorRef} className={classes.editor} />;
+  return (
+    <div className={classes.root}>
+      <div ref={editorRef} className={classes.editor} />
+
+      <input
+        className={classes.field}
+        value={internalAnswer.time_complexity ?? ''}
+        placeholder="Time Complexity"
+        onChange={(e) => setInternalAnswer((prev) => ({ ...prev, time_complexity: e.target.value }))}
+        onBlur={reportChange}
+      />
+
+      <input
+        className={classes.field}
+        value={internalAnswer.space_complexity ?? ''}
+        placeholder="Space Complexity"
+        onChange={(e) => setInternalAnswer((prev) => ({ ...prev, space_complexity: e.target.value }))}
+        onBlur={reportChange}
+      />
+
+      <textarea
+        className={classes.textarea}
+        value={internalAnswer.explanation ?? ''}
+        placeholder="Explanation"
+        onChange={(e) => setInternalAnswer((prev) => ({ ...prev, explanation: e.target.value }))}
+        onBlur={reportChange}
+      />
+
+      {isTeacherMode && <div className={classes.teacherSlot} />}
+    </div>
+  );
 };
-
-const useStyles = makeStyles()((theme) => ({
-  editor: {
-    width: '100%',
-    minHeight: '200px',
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: '4px',
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-
-    '& .cm-editor': {
-      outline: 'none',
-    },
-    '& .cm-content': {
-      fontFamily: '"Fira Code", "Courier New", monospace',
-      fontSize: '14px',
-      padding: '10px 0',
-    },
-    '& .cm-gutters': {
-      backgroundColor: '#f5f5f5',
-      borderRight: `1px solid ${theme.palette.divider}`,
-    },
-  },
-}));

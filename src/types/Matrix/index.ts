@@ -1,92 +1,152 @@
-import {
-  DEFAULT_COLS,
-  DEFAULT_ROWS,
-} from '@modules/shared/schemas/question-form.schema'
-import _ from 'lodash'
-import { z } from 'zod'
+import { z } from 'zod';
 
 import {
   BaseResponseAreaProps,
   BaseResponseAreaWizardProps,
-} from '../base-props.type'
-import { ResponseAreaTub } from '../response-area-tub'
+} from '../base-props.type';
+import { PseudocodeInput } from '../Pseudocode/Pseudocode.component';
+import { EvaluationResult, EvaluationResultSchema } from '../Pseudocode/types/output';
+import { ResponseAreaTub } from '../response-area-tub';
 
-import { padMatrixFromRowsAndCols } from './helpers'
-import { Matrix } from './Matrix.component'
-import { matrixConfigSchema, matrixResponseAnswerSchema } from './Matrix.schema'
-import { MatrixWizard } from './MatrixWizard.component'
+/* ============================================================
+ * Helpers
+ * ============================================================
+ */
 
-export const defaultMatrixAnswer = {
-  rows: DEFAULT_ROWS,
-  cols: DEFAULT_COLS,
-  type: 'MATRIX' as const,
-  answers: padMatrixFromRowsAndCols({
-    rows: DEFAULT_ROWS,
-    cols: DEFAULT_COLS,
-  }),
+/**
+ * Safely parse + validate EvaluationResult from a JSON string.
+ * Returns undefined if anything fails.
+ */
+function safeParseEvaluationResult(
+  value: unknown
+): EvaluationResult | undefined {
+  if (typeof value !== 'string') return undefined;
+
+  try {
+    const json = JSON.parse(value);
+    const parsed = EvaluationResultSchema.safeParse(json);
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
-export class MatrixResponseAreaTub extends ResponseAreaTub {
-  public readonly responseType = 'MATRIX'
+/**
+ * Minimal safe default.
+ * This ensures legacy systems always receive valid JSON.
+ */
+function createDefaultEvaluationResult(): EvaluationResult {
+  return {
+    is_correct: false,
+    score: 0,
+    feedback: '',
+    feedback_items: [],
+    warnings: [],
+    errors: [],
+    metadata: {},
+  };
+}
 
-  protected configSchema = matrixConfigSchema
+/* ============================================================
+ * PseudocodeResponseAreaTub
+ * ============================================================
+ */
 
-  protected config?: z.infer<typeof matrixConfigSchema>
+export class PseudocodeResponseAreaTub extends ResponseAreaTub {
+  public readonly responseType = 'PSEUDOCODE';
 
-  protected answerSchema = matrixResponseAnswerSchema
+  public readonly displayWideInput = true;
 
-  protected answer?: z.infer<typeof matrixResponseAnswerSchema>
+  /**
+   * Legacy constraint:
+   * Stored answer must be a string (JSON-encoded)
+   */
+  protected answerSchema = z.string();
 
-  public readonly displayWideInput = true
+  /**
+   * Stored answer (JSON string)
+   */
+  protected answer?: string;
 
+  /* ----------------------------------------------------------
+   * Lifecycle: Initialization
+   * ---------------------------------------------------------- */
+
+  /**
+   * Ensure we always start with a valid JSON payload.
+   * Called when the response area is first created.
+   */
   initWithDefault = () => {
-    this.config = {
-      rows: DEFAULT_ROWS,
-      cols: DEFAULT_COLS,
+    if (!this.answer) {
+      this.answer = JSON.stringify(createDefaultEvaluationResult());
+      return;
     }
-    this.answer = padMatrixFromRowsAndCols({
-      rows: DEFAULT_ROWS,
-      cols: DEFAULT_COLS,
-    })
+
+    // If existing answer is invalid, reset safely
+    const parsed = safeParseEvaluationResult(this.answer);
+    if (!parsed) {
+      this.answer = JSON.stringify(createDefaultEvaluationResult());
+    }
   }
 
-  protected extractAnswer = (provided: any): void => {
-    if (!this.config) throw new Error('Config missing')
-    if (!Array.isArray(provided)) throw new Error('Answer is not an array')
+  /* ----------------------------------------------------------
+   * Lifecycle: Pre-submission Validation
+   * ---------------------------------------------------------- */
 
-    // legacy handling: answer used to be stored as a one-dimensional array. This
-    // checks which format the answer is in and converts it to a two-dimensional
-    // array if necessary
-    const isChuncked = Array.isArray(provided[0])
-    let answerToParse: z.infer<typeof matrixResponseAnswerSchema>
-    if (isChuncked) {
-      answerToParse = provided
-    } else {
-      answerToParse = _.chunk(provided, this.config.cols)
+  /**
+   * Runs before every submission.
+   * Throwing here blocks submission.
+   */
+  customCheck = () => {
+    const parsed = safeParseEvaluationResult(this.answer);
+
+    if (!parsed) {
+      throw new Error(
+        'Invalid pseudocode evaluation payload. Please re-enter your response.'
+      );
     }
-    const parsedAnswer = this.answerSchema.safeParse(answerToParse)
-    if (!parsedAnswer.success) throw new Error('Could not extract answer')
 
-    this.answer = parsedAnswer.data
+    // Optional extra safety checks (cheap, but valuable)
+    if (parsed.score < 0 || parsed.score > 1) {
+      throw new Error('Evaluation score must be between 0 and 1.');
+    }
+
+    if (!Array.isArray(parsed.feedback_items)) {
+      throw new Error('Feedback items must be an array.');
+    }
   }
+
+  /* ----------------------------------------------------------
+   * Student / Read-only View
+   * ---------------------------------------------------------- */
 
   InputComponent = (props: BaseResponseAreaProps) => {
-    if (!this.config) throw new Error('Config missing')
+    const evaluationResult = safeParseEvaluationResult(props.answer);
 
-    return Matrix({
+    return PseudocodeInput({
       ...props,
-      config: this.config,
-    })
-  }
+      answer: evaluationResult,
+      isTeacherMode: false,
+    });
+  };
+
+  /* ----------------------------------------------------------
+   * Wizard / Editable View
+   * ---------------------------------------------------------- */
 
   WizardComponent = (props: BaseResponseAreaWizardProps) => {
-    if (!this.config) throw new Error('Config missing')
-    if (this.answer === undefined) throw new Error('Answer missing')
+    const evaluationResult = safeParseEvaluationResult(this.answer);
 
-    return MatrixWizard({
+    return PseudocodeInput({
       ...props,
-      config: this.config,
-      answer: this.answer,
-    })
-  }
+      answer: evaluationResult,
+      isTeacherMode: true,
+      handleChange: (result: EvaluationResult) => {
+        props.handleChange({
+          responseType: this.responseType,
+          answer: JSON.stringify(result),
+        });
+      },
+    });
+  };
 }
