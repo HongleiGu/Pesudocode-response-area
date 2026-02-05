@@ -1,7 +1,7 @@
 import { makeStyles } from "@styles";
 
 /* -------------------- Styles -------------------- */
-export const usePseudocodeInputStyles = makeStyles()((theme) => ({
+export const usePseudocodeStyles = makeStyles()((theme) => ({
   root: {
     width: '100%',
     display: 'flex',
@@ -43,7 +43,46 @@ export const usePseudocodeInputStyles = makeStyles()((theme) => ({
     minHeight: 80,
     resize: 'vertical',
   },
-  teacherSlot: {
-    minHeight: 0,
+  // eval params panel
+  evalParams: {
+    border: '1px solid var(--border-muted)',
+    borderRadius: 6,
+    marginBottom: 8,
+    background: 'var(--bg-subtle)',
   },
+
+  evalParamsToggle: {
+    width: '100%',
+    textAlign: 'left',
+    padding: '6px 10px',
+    fontWeight: 600,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+  },
+
+  evalParamsContent: {
+    maxHeight: 320,
+    overflow: 'auto',
+    padding: '8px 10px',
+  },
+
+  evalParamsSection: {
+    border: 'none',
+    marginBottom: 8,
+
+    '& legend': {
+      fontSize: 12,
+      opacity: 0.7,
+      marginBottom: 4,
+    },
+  },
+
+  evalParamsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 13,
+    marginBottom: 4,
+  }
 }));

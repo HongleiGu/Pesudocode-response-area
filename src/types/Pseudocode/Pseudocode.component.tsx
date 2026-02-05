@@ -1,4 +1,3 @@
-// PseudocodeInput.tsx
 import { foldGutter, foldService, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
 import { placeholder } from '@codemirror/view';
@@ -13,26 +12,20 @@ import { pseudocodeHighlightStyle } from './plugins/highlight';
 import { pseudocodeLanguage } from './plugins/language';
 import { pseudocodeTheme } from './plugins/pseudocode.theme';
 import { StudentResponse } from './types/input';
-import { usePseudocodeInputStyles } from './utils/styles';
+import { defaultStudentResponse } from './utils/consts';
+import { usePseudocodeStyles } from './utils/styles';
 
 type PseudocodeInputProps = Omit<BaseResponseAreaProps, 'handleChange' | 'answer'> & {
   handleChange: (val: StudentResponse) => void;
   answer?: StudentResponse;
-  isTeacherMode?: boolean;
 };
 
 export const PseudocodeInput: React.FC<PseudocodeInputProps> = ({
   handleChange,
   answer,
-  isTeacherMode = false,
 }) => {
-  const { classes } = usePseudocodeInputStyles();
-  const [internalAnswer, setInternalAnswer] = useState<StudentResponse>(answer ?? {
-    pseudocode: '',
-    time_complexity: null,
-    space_complexity: null,
-    explanation: null,
-  });
+  const { classes } = usePseudocodeStyles();
+  const [internalAnswer, setInternalAnswer] = useState<StudentResponse>(answer ?? defaultStudentResponse);
 
   const editorRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -119,8 +112,6 @@ export const PseudocodeInput: React.FC<PseudocodeInputProps> = ({
         onChange={(e) => setInternalAnswer((prev) => ({ ...prev, explanation: e.target.value }))}
         onBlur={reportChange}
       />
-
-      {isTeacherMode && <div className={classes.teacherSlot} />}
     </div>
   );
 };

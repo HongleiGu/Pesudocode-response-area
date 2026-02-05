@@ -1,123 +1,104 @@
 // PseudocodeResponseAreaTub.ts
-import { z } from 'zod';
-
 import {
   BaseResponseAreaProps,
   BaseResponseAreaWizardProps,
-} from '../base-props.type';
-import { ResponseAreaTub } from '../response-area-tub';
+} from '../base-props.type'
+import { ResponseAreaTub } from '../response-area-tub'
 
-import { PseudocodeInput } from './Pseudocode.component';
-import { StudentResponse, StudentResponseSchema } from './types/input';
-import { defaultStudentResponse } from './utils/consts';
-// import { validatePseudocode, PseudocodeFeedback, CheckPhase } from './validatePseudocode';
+import { PseudocodeInput } from './Pseudocode.component'
+import { PseudocodeWizard } from './PseudocodeWizard.component'
+import {
+  StudentResponse,
+  StudentResponseSchema,
+  ExpectedAnswer,
+  ExpectedAnswerSchema,
+} from './types/input'
+import { defaultExpectedAnswer, defaultStudentResponse } from './utils/consts'
 
 /* ===========================================================
  * PseudocodeResponseAreaTub
  * =========================================================== */
+
 export class PseudocodeResponseAreaTub extends ResponseAreaTub {
-  public readonly responseType = 'PSEUDOCODE';
-  public readonly displayWideInput = true;
+  public readonly responseType = 'PSEUDOCODE'
+  public readonly displayWideInput = true
 
-  protected answerSchema = StudentResponseSchema;
-  protected answer: StudentResponse = defaultStudentResponse;
+  /* ---------- STUDENT ---------- */
 
-  private response: StudentResponse | null = null;
-  // private previewFeedback: PseudocodeFeedback | null = null;
-  // private phase: CheckPhase = CheckPhase.Idle;
+  protected answerSchema = ExpectedAnswerSchema//StudentResponseSchema
+  private response: StudentResponse | null = null
 
-  public readonly delegateFeedback = false;
-  public readonly delegateLivePreview = true;
+  /* ---------- TEACHER ---------- */
+
+  protected answer: ExpectedAnswer = defaultExpectedAnswer
+
+  public readonly delegateFeedback = false
+  public readonly delegateLivePreview = true
+
+  /* -------------------- Init -------------------- */
 
   initWithConfig = (config: any) => {
-    const parsed = this.answerSchema.safeParse(this.answer);
-    this.answer = parsed.success ? parsed.data : defaultStudentResponse;
-  };
+    const parsed = ExpectedAnswerSchema.safeParse(config?.answer)
+    this.answer = parsed.success
+      ? parsed.data
+      : defaultExpectedAnswer
+  }
 
-  /* -------------------- Pre-submission validation -------------------- */
+  /* -------------------- Validation -------------------- */
+
   customCheck = () => {
-    // if (this.previewFeedback) {
-    //   throw new Error('Preview validation failed');
-    // }
-    // this.previewFeedback = null;
-  };
+    // reserved for later (AST / static analysis)
+  }
 
-  /* -------------------- Student / read-only input -------------------- */
+  /* =====================================================
+   * Student Input
+   * ===================================================== */
+
   public InputComponent = (props: BaseResponseAreaProps): JSX.Element => {
-    const parsed = this.answerSchema.safeParse(props.answer);
-    const validAnswer = parsed.success ? parsed.data : defaultStudentResponse;
+    const parsed = StudentResponseSchema.safeParse(props.answer)
+    const validAnswer = parsed.success
+      ? parsed.data
+      : defaultStudentResponse
 
-    this.response = validAnswer;
-
-    /* ---------- Extract submitted feedback (if any) ---------- */
-    // const submittedFeedback: PseudocodeFeedback | null = (() => {
-    //   const raw = props.feedback?.feedback;
-    //   if (!raw) return null;
-
-    //   try {
-    //     const jsonPart = raw.split('<br>')[1]?.trim();
-    //     if (!jsonPart) return null;
-    //     return JSON.parse(jsonPart);
-    //   } catch {
-    //     return null;
-    //   }
-    // })();
-
-    // const effectiveFeedback = this.previewFeedback ?? submittedFeedback;
+    this.response = validAnswer
 
     return (
       <PseudocodeInput
         {...props}
         answer={validAnswer}
-        // feedback={effectiveFeedback ?? undefined}
-        isTeacherMode={false}
         handleChange={(val: StudentResponse) => {
-          // Update preview and call handleChange for live student updates
-          console.log(val, props.answer)
-          props.handleChange(val);
-
-          // const preview = validatePseudocode(val);
-          // if (preview.errors.length > 0) {
-          //   this.previewFeedback = preview;
-          //   this.phase = CheckPhase.PreviewError;
-          // } else {
-          //   this.previewFeedback = null;
-          //   this.phase = CheckPhase.Idle;
-          // }
+          this.response = val
+          console.log("response", this.response)
+          props.handleChange(val)
         }}
       />
-    );
-  };
+    )
+  }
 
-  /* -------------------- Wizard / teacher-editable input -------------------- */
-  public WizardComponent = (props: BaseResponseAreaWizardProps): JSX.Element => {
+  /* =====================================================
+   * Wizard / Teacher Input
+   * ===================================================== */
+
+  public WizardComponent = (
+    props: BaseResponseAreaWizardProps,
+  ): JSX.Element => {
     return (
-      <PseudocodeInput
-        {...props}
+      <>
+      <p>Wizard</p>
+      <PseudocodeWizard
         answer={this.answer}
-        // feedback={null}
-        isTeacherMode={true}
-        handleChange={(val: StudentResponse) => {
-          // Update internal answer
-          this.answer = val;
+        handleChange={(val: ExpectedAnswer) => {
+          this.answer = val
 
-          // Normalize for legacy system: no undefined, only null
-          const normalizedAnswer = {
-            pseudocode: val.pseudocode ?? '',
-            time_complexity: val.time_complexity ?? null,
-            space_complexity: val.space_complexity ?? null,
-            explanation: val.explanation ?? null,
-          };
+          console.log("answer", this.answer)
 
-          console.log('Normalized answer:', normalizedAnswer);
-
-          // Send shallow object to backend
           props.handleChange({
             responseType: this.responseType,
-            answer: normalizedAnswer,
-          });
+            answer: val,
+          })
         }}
       />
-    );
-  };
+      </>
+    )
+  }
 }

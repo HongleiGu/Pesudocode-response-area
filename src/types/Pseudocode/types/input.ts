@@ -1,95 +1,5 @@
 import { z } from 'zod';
 
-/* ============================================================
- * StudentResponse
- * ============================================================
- */
-
-export const StudentResponseSchema = z.object({
-  pseudocode: z
-    .string()
-    .min(1, 'Pseudocode cannot be empty')
-    .refine((v) => v.trim().length > 0, {
-      message: 'Pseudocode cannot be empty',
-    })
-    .describe('The pseudocode submitted by the student'),
-
-  time_complexity: z
-    .string()
-    .optional()
-    .nullable()
-    .describe("Student's answer for time complexity, e.g., 'O(n^2)'"),
-
-  space_complexity: z
-    .string()
-    .optional()
-    .nullable()
-    .describe("Student's answer for space complexity, e.g., 'O(1)'"),
-
-  explanation: z
-    .string()
-    .optional()
-    .nullable()
-    .describe("Student's explanation of their complexity analysis"),
-});
-
-export type StudentResponse = z.infer<typeof StudentResponseSchema>;
-
-/* ============================================================
- * ExpectedAnswer
- * ============================================================
- */
-
-export const ExpectedAnswerSchema = z.object({
-  expected_time_complexity: z
-    .string()
-    .describe('Expected time complexity in Big-O notation'),
-
-  expected_space_complexity: z
-    .string()
-    .default('O(1)')
-    .describe('Expected space complexity in Big-O notation'),
-
-  acceptable_time_alternatives: z
-    .array(z.string())
-    .default([])
-    .describe('Alternative acceptable time complexity representations'),
-
-  acceptable_space_alternatives: z
-    .array(z.string())
-    .default([])
-    .describe('Alternative acceptable space complexity representations'),
-
-  algorithm_description: z
-    .string()
-    .optional()
-    .describe('Description of the expected algorithm'),
-
-  algorithm_type: z
-    .string()
-    .optional()
-    .describe('Type of algorithm: sorting, searching, graph, etc.'),
-
-  expected_constructs: z
-    .array(z.string())
-    .default([])
-    .describe('Expected code constructs: nested_loop, recursion, etc.'),
-
-  time_complexity_weight: z
-    .number()
-    .min(0)
-    .max(1)
-    .default(0.5)
-    .describe('Weight for time complexity in scoring'),
-
-  space_complexity_weight: z
-    .number()
-    .min(0)
-    .max(1)
-    .default(0.5)
-    .describe('Weight for space complexity in scoring'),
-});
-
 export type ExpectedAnswer = z.infer<typeof ExpectedAnswerSchema>;
 
 /* ============================================================
@@ -200,3 +110,96 @@ export const EvaluationParamsSchema = z.object({
 });
 
 export type EvaluationParams = z.infer<typeof EvaluationParamsSchema>;
+
+/* ============================================================
+ * StudentResponse
+ * ============================================================
+ */
+
+export const StudentResponseSchema = z.object({
+  pseudocode: z
+    .string()
+    .min(1, 'Pseudocode cannot be empty')
+    .refine((v) => v.trim().length > 0, {
+      message: 'Pseudocode cannot be empty',
+    })
+    .describe('The pseudocode submitted by the student'),
+
+  time_complexity: z
+    .string()
+    .optional()
+    .nullable()
+    .describe("Student's answer for time complexity, e.g., 'O(n^2)'"),
+
+  space_complexity: z
+    .string()
+    .optional()
+    .nullable()
+    .describe("Student's answer for space complexity, e.g., 'O(1)'"),
+
+  explanation: z
+    .string()
+    .optional()
+    .nullable()
+    .describe("Student's explanation of their complexity analysis"),
+});
+
+export type StudentResponse = z.infer<typeof StudentResponseSchema>;
+
+/* ============================================================
+ * ExpectedAnswer
+ * ============================================================
+ */
+
+export const ExpectedAnswerSchema = z.object({
+  expected_time_complexity: z
+    .string()
+    .default('O(1)')
+    .describe('Expected time complexity in Big-O notation'),
+
+  expected_space_complexity: z
+    .string()
+    .default('O(1)')
+    .describe('Expected space complexity in Big-O notation'),
+
+  acceptable_time_alternatives: z
+    .array(z.string())
+    .default([])
+    .describe('Alternative acceptable time complexity representations'),
+
+  acceptable_space_alternatives: z
+    .array(z.string())
+    .default([])
+    .describe('Alternative acceptable space complexity representations'),
+
+  algorithm_description: z
+    .string()
+    .optional()
+    .describe('Description of the expected algorithm'),
+
+  algorithm_type: z
+    .string()
+    .optional()
+    .describe('Type of algorithm: sorting, searching, graph, etc.'),
+
+  expected_constructs: z
+    .array(z.string())
+    .default([])
+    .describe('Expected code constructs: nested_loop, recursion, etc.'),
+
+  time_complexity_weight: z
+    .number()
+    .min(0)
+    .max(1)
+    .default(0.5)
+    .describe('Weight for time complexity in scoring'),
+
+  space_complexity_weight: z
+    .number()
+    .min(0)
+    .max(1)
+    .default(0.5)
+    .describe('Weight for space complexity in scoring'),
+  // 🔑 Teacher-only
+  evaluation_params: EvaluationParamsSchema.default({}),
+});
